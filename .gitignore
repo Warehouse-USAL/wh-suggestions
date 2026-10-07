@@ -1,0 +1,15 @@
+# Binaries and build output
+/bin/
+/wh-suggestions
+*.test
+*.out
+coverage.out
+
+# Local env — never commit
+.env
+
+# IDE and OS
+.idea/
+.vscode/
+*.iml
+.DS_Store

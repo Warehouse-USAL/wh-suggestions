@@ -1,0 +1,39 @@
+# Production overlay: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Differences from dev:
+#  - suggestions runs the prebuilt GHCR image and joins the shared reverse-proxy net
+#  - it also joins wh-backend's compose network to reach Redpanda (a different
+#    compose project, so `depends_on` can't express it — the consumer retries)
+#  - Redis persists to a named volume (AOF on) so a restart keeps the model
+
+services:
+  suggestions:
+    image: ghcr.io/warehouse-usal/wh-suggestions:latest
+    build: !reset null
+    ports: !override []
+    environment:
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-redpanda:9092}
+      JWT_SECRET: ${JWT_SECRET}
+    restart: always
+    networks:
+      - wh-network
+      - wh-proxy
+      - wh-backend-net
+
+  redis:
+    volumes:
+      - redis_data:/data
+    restart: always
+
+networks:
+  wh-network:
+    driver: bridge
+  wh-proxy:
+    external: true
+  # Created by the wh-backend compose project (project "wh-backend" + network "wh-network").
+  wh-backend-net:
+    external: true
+    name: wh-backend_wh-network
+
+volumes:
+  redis_data:

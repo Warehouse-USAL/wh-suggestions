@@ -1,0 +1,37 @@
+# Dev stack: docker compose up --build
+#
+# Redpanda is owned by wh-backend. For local work, start wh-backend's stack
+# (`make up-infra` there) and point KAFKA_BROKERS at its published port.
+
+services:
+  suggestions:
+    build: .
+    environment:
+      HTTP_ADDR: ${HTTP_ADDR:-:8080}
+      REDIS_ADDR: ${REDIS_ADDR:-redis:6379}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-host.docker.internal:19092}
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-order.completed}
+      KAFKA_GROUP_ID: ${KAFKA_GROUP_ID:-wh-suggestions}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-prod-min-32-chars}
+    ports:
+      - "8083:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - wh-network
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wh-network
+
+networks:
+  wh-network:
+    driver: bridge
